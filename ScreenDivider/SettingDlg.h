@@ -3,7 +3,7 @@
 
 // CSettingDlg 대화 상자입니다.
 
-class CSettingDlg : public CDialogEx
+class CSettingDlg : public CFlatDialogEx
 {
 	DECLARE_DYNAMIC(CSettingDlg)
 
@@ -19,11 +19,12 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	CListCtrl m_List;
-	afx_msg void OnLvnItemchangedList1(NMHDR *pNMHDR, LRESULT *pResult);
 	virtual BOOL OnInitDialog();
+
 private:
-//	unsigned int m_uiSettingSub;
+	CDialogEx *m_pDlgStyle;
+	CDialogEx *m_pDlgGeneral;
+	CListCtrl m_List;
 public:
-	afx_msg void OnBnClickedButton1();
+	afx_msg void OnLvnItemchangedListSettings(NMHDR *pNMHDR, LRESULT *pResult);
 };
