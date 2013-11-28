@@ -6,11 +6,15 @@
 #include "ScreenDivider.h"
 #include "ScreenDividerDlg.h"
 #include "afxdialogex.h"
+#include "EditorDlg.h"
+#include "SettingDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
+#define UID_TRAY 0
+#define TM_NOTIFICATION (WM_APP + 1)
 
 // CScreenDividerDlg dialog.
 
@@ -31,7 +35,10 @@ void CScreenDividerDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CScreenDividerDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_BN_CLICKED(IDC_BUTTON1, &CScreenDividerDlg::OnBnClickedButton1)
+	ON_MESSAGE(TM_NOTIFICATION, OnTrayNotification)
+	ON_COMMAND(ID_TRAYMENU_QUIT, &CScreenDividerDlg::OnTraymenuQuit)
+	ON_COMMAND(ID_TRAYMENU_EDITOR, &CScreenDividerDlg::OnTraymenuEditor)
+	ON_COMMAND(ID_TRAYMENU_SETTINGS, &CScreenDividerDlg::OnTraymenuSettings)
 END_MESSAGE_MAP()
 
 
@@ -47,6 +54,16 @@ BOOL CScreenDividerDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
+	// Create tray icon
+	ZeroMemory(&m_nid, sizeof(m_nid));
+	m_nid.cbSize = sizeof(NOTIFYICONDATA);
+	m_nid.hWnd = GetSafeHwnd();
+	m_nid.uID = UID_TRAY;
+	m_nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+	m_nid.uCallbackMessage = TM_NOTIFICATION;
+	m_nid.hIcon = m_hIcon;
+	lstrcpy(m_nid.szTip, L"ScreenDivider");
+	Shell_NotifyIcon(NIM_ADD, &m_nid);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -87,48 +104,61 @@ HCURSOR CScreenDividerDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-// Refresh dll's data
-typedef BOOL (*PFN_REFRESHSDFORM)(TCHAR strSDFormPath[MAX_PATH]);
-BOOL RefreshSDForm(TCHAR strSDFormPath[MAX_PATH])
+LRESULT CScreenDividerDlg::OnTrayNotification(WPARAM wParam, LPARAM lParam)
 {
-	BOOL isSuccess = TRUE;
-
-	// Load library to get address of procedure('RefreshSDForm()')
-	HMODULE hModule;
-#ifdef _X64
-	hModule = LoadLibrary(L"ScreenDividerHk64.dll");
-#else
-	hModule = LoadLibrary(L"ScreenDividerHk32.dll");
-#endif
-	if (hModule == NULL)
+	switch (lParam)
 	{
-		isSuccess = FALSE;
-		goto EXIT;
+	case WM_RBUTTONDOWN:
+		CPoint point;
+		GetCursorPos(&point);
+
+		CMenu menuTray;
+		menuTray.LoadMenu(IDR_MENU_TRAY);
+
+		CMenu *pFirstMenu;
+		pFirstMenu = menuTray.GetSubMenu(0);
+		pFirstMenu->TrackPopupMenu
+		(
+			TPM_LEFTALIGN | TPM_RIGHTBUTTON,
+			point.x, point.y,
+			AfxGetMainWnd()
+		);
+		break;
 	}
 
-	// Get address of 'RefreshSDForm()'
-	PFN_REFRESHSDFORM RefreshSDForm = NULL;
-	RefreshSDForm = (PFN_REFRESHSDFORM)GetProcAddress(hModule, "RefreshSDForm");
-	if (RefreshSDForm == NULL)
-	{
-		isSuccess = FALSE;
-		goto EXIT;
-	}
-
-	// Call RefreshSDForm() got top
-	RefreshSDForm(strSDFormPath);
-
-EXIT:
-	if (hModule != NULL)
-	{
-		FreeLibrary(hModule);
-	}
-
-	return isSuccess;
+	return TRUE;
 }
 
-void CScreenDividerDlg::OnBnClickedButton1()
+BOOL CScreenDividerDlg::DestroyWindow()
 {
-	// TODO: Add your control notification handler code here
-	RefreshSDForm(L"D:\\sdForm.sdForm");
+	// TODO: Add your specialized code here and/or call the base class
+	// Destroy tray icon
+	Shell_NotifyIcon(NIM_DELETE, &m_nid);
+
+	return CDialogEx::DestroyWindow();
+}
+
+void CScreenDividerDlg::OnTraymenuQuit()
+{
+	// TODO: Add your command handler code here
+	EndDialog(IDCANCEL);
+}
+
+
+void CScreenDividerDlg::OnTraymenuEditor()
+{
+	// TODO: Add your command handler code here
+	CEditorDlg *pDlgEditor;
+	pDlgEditor = new CEditorDlg();
+	pDlgEditor->Create(IDD_EDITOR_DIALOG, this);
+	pDlgEditor->ShowWindow(SW_SHOW);
+}
+
+void CScreenDividerDlg::OnTraymenuSettings()
+{
+	// TODO: Add your command handler code here
+	CSettingDlg *pDlgSetting;
+	pDlgSetting = new CSettingDlg();
+	pDlgSetting->Create(IDD_SETTING_DIALOG, this);
+	pDlgSetting->ShowWindow(SW_SHOW);
 }
